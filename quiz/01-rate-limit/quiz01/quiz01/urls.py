@@ -18,10 +18,14 @@ from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 from core.views import CoreViewSet
 
+
 router = DefaultRouter()
-# router.register('core', CoreViewSet)
+router.register('core', CoreViewSet)
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-
+    # for rest_framework
+    path('api/', include(router.urls)),
+    # for rest_framework auth
+    path('api-auth/', include('rest_framework.urls', namespace='rest_framework'))
 ]
