@@ -1,5 +1,11 @@
-from django.shortcuts import render
-from rest_framework import viewsets
 # Create your views here.
-class CoreViewSet():
-    print('ok')
+from core.models import CoreModel
+from core.serializers import CoreSerializers
+
+from rest_framework import viewsets
+
+
+# Create your views here.
+class CoreViewSet(viewsets.ModelViewSet):
+    queryset = CoreModel.objects.all()
+    serializer_class = CoreSerializers
