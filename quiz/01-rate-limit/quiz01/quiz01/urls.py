@@ -17,8 +17,11 @@ from django.contrib import admin
 from django.urls import include, path
 from core.views import RateLimitAPI
 
-
+from django.conf.urls import (
+    handler403
+)
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/',RateLimitAPI.as_view()),
 ]
+handler403 = 'core.views.handler403'
