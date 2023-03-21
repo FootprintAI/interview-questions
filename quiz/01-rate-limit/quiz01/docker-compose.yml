@@ -9,7 +9,7 @@ services:
       - POSTGRES_PASSWORD=postgres
   web:
     build: .
-    image: djangoratelimit
+    image: v3.3
     command: python manage.py runserver 0.0.0.0:8000
     volumes:
       - .:/code
@@ -22,6 +22,7 @@ services:
     depends_on:
       - db
       - migration
+
   migration:
     image: postgres
     command: python manage.py migrate --noinput
@@ -29,3 +30,17 @@ services:
       - .:/code
     depends_on:
       - db
+
+  master:
+    image: locustio/locust
+    ports:
+     - "8089:8089"
+    volumes:
+      - ./:/mnt/locust
+    command: -f /mnt/locust/locustfile.py --master -H http://web:8000
+  
+  worker:
+    image: locustio/locust
+    volumes:
+      - ./:/mnt/locust
+    command: -f /mnt/locust/locustfile.py --worker --master-host master
