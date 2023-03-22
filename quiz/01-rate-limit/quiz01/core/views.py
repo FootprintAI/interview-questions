@@ -44,12 +44,11 @@ class RateLimitAPI(View):
 #get ratelimit info
 def ratelimit_tracking(fun,request,fun_rate):
     block_info = get_usage(request, key="ip",fn=fun, rate=fun_rate,increment =True)
-    # print(block_info)
+    print(block_info)
     return block_info
 
 def headerfiled_post_db(request,block_info):
     client_id = get_client_ip_address(request)
-    print(client_id)
     if POST_Model.objects.filter(customer_ID=client_id).exists():
         db_info = POST_Model.objects.filter(customer_ID = client_id)
         db_info.update(Limit = block_info['limit'],
@@ -66,7 +65,6 @@ def headerfiled_post_db(request,block_info):
 
 def headerfiled_get_db(request,block_info):
     client_id = get_client_ip_address(request)
-    print(client_id)
     if GET_Model.objects.filter(customer_ID=client_id).exists():
         db_info = GET_Model.objects.filter(customer_ID = client_id)
         db_info.update(Limit = block_info['limit'],
@@ -93,7 +91,7 @@ def get_client_ip_address(request):
 #if over rate limit will redirect 403 to 429
 def handler403(request, exception=None):
     if isinstance(exception, Ratelimited):
-
+        print("Over Rating")
         if request.method == 'POST':
             block_info = ratelimit_tracking(RateLimitAPI.post,request,'1/s')
         elif request.method == 'GET':

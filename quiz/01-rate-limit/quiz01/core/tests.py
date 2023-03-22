@@ -10,8 +10,9 @@ class APITestCase(TestCase):
     
     # Unover rate limiting get test 
     # will be get 200 status
-    def test_get_unover(self):
+    def test_get_not_over(self):
         time.sleep(1)
+        print('-----------Get not over-----------')
         for i in range(1,101):
             resp = self.c.get('/api/')
         self.assertEqual(resp.status_code, 200)
@@ -19,8 +20,9 @@ class APITestCase(TestCase):
 
     # Unover rate limiting post test 
     # will be get 200 status
-    def test_post_unover(self):
+    def test_post_not_over(self):
         time.sleep(1)
+        print('-----------Post not over-----------')
         resp = self.c.post('/api/')
         self.assertEqual(resp.status_code, 200)
 
@@ -28,7 +30,8 @@ class APITestCase(TestCase):
     # will be get 429 status
     
     def test_get_over100(self):
-        time.sleep(1)
+        time.sleep(2)
+        print('-----------Get over-----------')
         for i in range(1,102):
             resp = self.c.get('/api/')
         self.assertEqual(resp.status_code, 429)
@@ -37,6 +40,7 @@ class APITestCase(TestCase):
     # # # will be get 429 status
     def test_post_over1(self):
         time.sleep(1)
+        print('-----------Post over-----------')
         resp = self.c.post('/api/')
         resp = self.c.post('/api/')
         self.assertEqual(resp.status_code, 429)    
