@@ -11,7 +11,7 @@ class APITestCase(TestCase):
     # Unover rate limiting get test 
     # will be get 200 status
     def test_get_not_over(self):
-        time.sleep(1)
+        time.sleep(2)
         print('-----------Get not over-----------')
         for i in range(1,101):
             resp = self.c.get('/api/')
