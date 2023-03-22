@@ -8,6 +8,7 @@ from django.utils.decorators import method_decorator
 from django.views.generic import View
 from django_ratelimit.exceptions import Ratelimited
 from django_ratelimit.core import get_usage, is_ratelimited
+from core.models import GET_Model, POST_Model
 
 @method_decorator(csrf_exempt, name='dispatch')
 class RateLimitAPI(View):
@@ -16,6 +17,7 @@ class RateLimitAPI(View):
     @method_decorator(ratelimit(key='ip', rate='100/s', method='GET'))
     def get(cls, request):
         block_info = ratelimit_tracking(cls,request,'100/s')
+        headerfiled_get_db(request,block_info)
         response = HttpResponse('X-RateLimit-Limit: '+str(block_info['limit'])+'\n'
                                 + 'X-RateLimit-Remaining: '+ str(block_info['limit'] - block_info['count'] )+'\n'
                                 + 'X-RateLimit-Reset: '+ str(block_info['time_left']))
@@ -29,6 +31,7 @@ class RateLimitAPI(View):
     @method_decorator(ratelimit(key='ip', rate='1/s', method='Post'))
     def post(cls, request):
         block_info = ratelimit_tracking(cls,request,'1/s')
+        headerfiled_post_db(request,block_info)
         response = HttpResponse('X-RateLimit-Limit: '+str(block_info['limit'])+'\n'
                                 + 'X-RateLimit-Remaining: '+ str(block_info['limit'] - block_info['count'] )+'\n'
                                 + 'X-RateLimit-Reset: '+ str(block_info['time_left']))
@@ -44,6 +47,49 @@ def ratelimit_tracking(fun,request,fun_rate):
     # print(block_info)
     return block_info
 
+def headerfiled_post_db(request,block_info):
+    client_id = get_client_ip_address(request)
+    print(client_id)
+    if POST_Model.objects.filter(customer_ID=client_id).exists():
+        db_info = POST_Model.objects.filter(customer_ID = client_id)
+        db_info.update(Limit = block_info['limit'],
+                       Remaining = block_info['limit'] - block_info['count'],
+                       Reset =block_info['time_left'],
+                       RetryAt = block_info['time_left'])
+        
+    else:
+        POST_Model.objects.create(customer_ID = client_id,
+                                  Limit = block_info['limit'],
+                                  Remaining = block_info['limit'] - block_info['count'],
+                                  Reset =block_info['time_left'],
+                                  RetryAt = block_info['time_left'])
+
+def headerfiled_get_db(request,block_info):
+    client_id = get_client_ip_address(request)
+    print(client_id)
+    if GET_Model.objects.filter(customer_ID=client_id).exists():
+        db_info = GET_Model.objects.filter(customer_ID = client_id)
+        db_info.update(Limit = block_info['limit'],
+                       Remaining = block_info['limit'] - block_info['count'],
+                       Reset =block_info['time_left'],
+                       RetryAt = block_info['time_left'])
+        
+    else:
+        GET_Model.objects.create(customer_ID = client_id,
+                                  Limit = block_info['limit'],
+                                  Remaining = block_info['limit'] - block_info['count'],
+                                  Reset =block_info['time_left'],
+                                  RetryAt = block_info['time_left'])
+        
+def get_client_ip_address(request):
+    req_headers = request.META
+    x_forwarded_for_value = req_headers.get('HTTP_X_FORWARDED_FOR')
+    if x_forwarded_for_value:
+        ip_addr = x_forwarded_for_value.split(',')[-1].strip()
+    else:
+        ip_addr = req_headers.get('REMOTE_ADDR')
+    return ip_addr
+
 #if over rate limit will redirect 403 to 429
 def handler403(request, exception=None):
     if isinstance(exception, Ratelimited):
@@ -52,7 +98,7 @@ def handler403(request, exception=None):
             block_info = ratelimit_tracking(RateLimitAPI.post,request,'1/s')
         elif request.method == 'GET':
             block_info = ratelimit_tracking(RateLimitAPI.get,request,'100/s')
-        
+        headerfiled_get_db(request,block_info)
         response = HttpResponse('Too Many Requests'+'\n'
                                 + 'Retry-At: ' + str(block_info['time_left']), status=429)
         response['Retry-At'] = block_info['time_left']

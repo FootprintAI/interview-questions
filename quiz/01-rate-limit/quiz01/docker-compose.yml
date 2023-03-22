@@ -1,15 +1,15 @@
 services:
-  db:
-    image: postgres
-    volumes:
-      - ./data/db:/var/lib/postgresql/data
-    environment:
-      - POSTGRES_DB=postgres
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
+  # db:
+  #   image: postgres
+  #   volumes:
+  #     - ./data/db:/var/lib/postgresql/data
+  #   environment:
+  #     - POSTGRES_DB=postgres
+  #     - POSTGRES_USER=postgres
+  #     - POSTGRES_PASSWORD=postgres
   web:
     build: .
-    image: v3.3
+    image: v3.3.1
     command: python manage.py runserver 0.0.0.0:8000
     volumes:
       - .:/code
@@ -19,18 +19,19 @@ services:
       - POSTGRES_NAME=postgres
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
-    depends_on:
-      - db
-      - migration
+    # depends_on:
+      # - db
+      # - migration
 
-  migration:
-    image: postgres
-    command: python manage.py migrate --noinput
-    volumes:
-      - .:/code
-    depends_on:
-      - db
+  # migration:
+  #   image: v3.3.1
+  #   command: python manage.py migrate
+  #   volumes:
+  #     - .:/code
+    # depends_on:
+      # - db
 
+  # Locust
   master:
     image: locustio/locust
     ports:
