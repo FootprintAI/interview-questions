@@ -15,7 +15,7 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import include, path
-from core.views import RateLimitAPI
+from core.views import RateLimitAPI,reset
 
 from django.conf.urls import (
     handler403
@@ -23,5 +23,6 @@ from django.conf.urls import (
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/',RateLimitAPI.as_view()),
+    path('reset/', reset)
 ]
 handler403 = 'core.views.handler403'
