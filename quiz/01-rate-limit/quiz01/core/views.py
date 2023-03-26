@@ -14,9 +14,9 @@ from core.models import GET_Model, POST_Model
 class RateLimitAPI(View):
 
     @classmethod
-    @method_decorator(ratelimit(key='ip', rate='100/s', method='GET'))
+    @method_decorator(ratelimit(group = 'get',key='ip', rate='100/s', method='GET'))
     def get(cls, request):
-        block_info = ratelimit_tracking(cls,request,'100/s')
+        block_info = ratelimit_tracking(request,'get','100/s','GET')
         headerfiled_get_db(request,block_info)
         response = HttpResponse('X-RateLimit-Limit: '+str(block_info['limit'])+'\n'
                                 + 'X-RateLimit-Remaining: '+ str(block_info['limit'] - block_info['count'] )+'\n'
@@ -28,9 +28,9 @@ class RateLimitAPI(View):
         return response
     
     @classmethod
-    @method_decorator(ratelimit(key='ip', rate='1/s', method='Post'))
+    @method_decorator(ratelimit(group = 'post', key='ip', rate='1/s', method='Post'))
     def post(cls, request):
-        block_info = ratelimit_tracking(cls,request,'1/s')
+        block_info = ratelimit_tracking(request,'post','1/s','POST')
         headerfiled_post_db(request,block_info)
         response = HttpResponse('X-RateLimit-Limit: '+str(block_info['limit'])+'\n'
                                 + 'X-RateLimit-Remaining: '+ str(block_info['limit'] - block_info['count'] )+'\n'
@@ -42,42 +42,56 @@ class RateLimitAPI(View):
         return response
 
 #get ratelimit info
-def ratelimit_tracking(fun,request,fun_rate):
-    block_info = get_usage(request, key="ip",fn=fun, rate=fun_rate,increment =True)
+def ratelimit_tracking(request, group, fun_rate, method):
+    block_info = get_usage(group = group, request=request ,key='ip', rate=fun_rate, method=method, increment =False)
     print(block_info)
     return block_info
 
 def headerfiled_post_db(request,block_info):
     client_id = get_client_ip_address(request)
     if POST_Model.objects.filter(customer_ID=client_id).exists():
-        db_info = POST_Model.objects.filter(customer_ID = client_id)
-        db_info.update(Limit = block_info['limit'],
+        try:
+            db_info = POST_Model.objects.filter(customer_ID = client_id)
+            db_info.update(Limit = block_info['limit'],
                        Remaining = block_info['limit'] - block_info['count'],
                        Reset =block_info['time_left'],
                        RetryAt = block_info['time_left'])
-        
+        except Exception as ex:
+            print("Error during update data of post (Possibly unsupported):", ex)
     else:
-        POST_Model.objects.create(customer_ID = client_id,
+        try:
+            POST_Model.objects.create(customer_ID = client_id,
                                   Limit = block_info['limit'],
                                   Remaining = block_info['limit'] - block_info['count'],
                                   Reset =block_info['time_left'],
                                   RetryAt = block_info['time_left'])
+        except Exception as ex:
+            print("Error during create data of post(Possibly unsupported):", ex)
+        
 
 def headerfiled_get_db(request,block_info):
     client_id = get_client_ip_address(request)
     if GET_Model.objects.filter(customer_ID=client_id).exists():
-        db_info = GET_Model.objects.filter(customer_ID = client_id)
-        db_info.update(Limit = block_info['limit'],
+        try:
+            db_info = GET_Model.objects.filter(customer_ID = client_id)
+            db_info.update(Limit = block_info['limit'],
                        Remaining = block_info['limit'] - block_info['count'],
                        Reset =block_info['time_left'],
                        RetryAt = block_info['time_left'])
+        except Exception as ex:
+            print("Error during update data of post (Possibly unsupported):", ex)
+        
         
     else:
-        GET_Model.objects.create(customer_ID = client_id,
+        try:
+            GET_Model.objects.create(customer_ID = client_id,
                                   Limit = block_info['limit'],
                                   Remaining = block_info['limit'] - block_info['count'],
                                   Reset =block_info['time_left'],
                                   RetryAt = block_info['time_left'])
+        except Exception as ex:
+            print("Error during create data of get(Possibly unsupported):", ex)
+        
         
 def get_client_ip_address(request):
     req_headers = request.META
@@ -93,9 +107,10 @@ def handler403(request, exception=None):
     if isinstance(exception, Ratelimited):
         print("Over Rating")
         if request.method == 'POST':
-            block_info = ratelimit_tracking(RateLimitAPI.post,request,'1/s')
+            block_info = ratelimit_tracking(request,'post','1/s','POST')
         elif request.method == 'GET':
-            block_info = ratelimit_tracking(RateLimitAPI.get,request,'100/s')
+            block_info = ratelimit_tracking(request,'get','100/s','GET')
+        print(block_info)
         headerfiled_get_db(request,block_info)
         response = HttpResponse('Too Many Requests'+'\n'
                                 + 'Retry-At: ' + str(block_info['time_left']), status=429)
