@@ -15,11 +15,19 @@ docker build -t="v3.3.1" .
 docker pull locustio/locust
 ```
 
-3. 啟動container
+3. Migration(資料遷移)
+```
+docker-compose run web python3 manage.py makemigrations
+```
+```
+docker-compose run web python3 manage.py migrate
+```
+
+4. 啟動container
 ```
 docker-compose up --scale worker=4
 ```
-4. 開啟網頁，導向 http://localhost:8000/api/  
+5. 開啟網頁，導向 http://localhost:8000/api/  
 
 ![image](/quiz/01-rate-limit/quiz01/image/webpage.png)
 
@@ -39,7 +47,7 @@ Postman 是常用的api測試工具，我們可以透過Postman簡單的進行Re
 ![image](/quiz/01-rate-limit/quiz01//image/postman_429.png "This is a sample image.")  
 
 ### Django Test
-透過Django Test 可以自訂義test的方法，並觀察1秒內的Request count，超過後顯示"Over Rating"。  
+透過Django Test 可以自訂義test的方法，查看response header內容，並顯示執行時間，如果超過呼叫次數顯示"Over Rating"。  
 ```
 docker-compose run web python3 manage.py test
 ```
