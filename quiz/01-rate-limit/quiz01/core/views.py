@@ -1,53 +1,40 @@
 # Create your views here.
 
-# from core.models import CoreModel
-from django_ratelimit.decorators import ratelimit
 from django.http import HttpResponse,HttpResponseForbidden
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from django.views.generic import View
-from django_ratelimit.exceptions import Ratelimited
-from django_ratelimit.core import get_usage
 from core.models import GET_Model, POST_Model
-
 
 import functools
 from django.conf import settings
 from django.core.cache import caches
 from django.core.exceptions import ImproperlyConfigured
 from django.utils.module_loading import import_string
+
+# django_ratelimit
+from django_ratelimit.exceptions import Ratelimited
+from django_ratelimit.decorators import ratelimit
 from django_ratelimit.core import get_usage, _SIMPLE_KEYS, _ACCESSOR_KEYS, _get_window, _make_cache_key, _split_rate
 from django_ratelimit import ALL, UNSAFE
 
+
 @method_decorator(csrf_exempt, name='dispatch')
 class RateLimitAPI(View):
-
-    @classmethod
     @method_decorator(ratelimit(group = 'get',key='ip', rate='100/s', method='GET'))
-    def get(cls, request):
-        block_info = ratelimit_tracking(request,'get','100/s','GET')
+    def get(self,request):
+        block_info = get_usage(group = 'get', request=request ,key='ip', rate='100/s', method='GET', increment =False)
+        response = ratelimit_response(block_info)
         headerfiled_get_db(request,block_info)
-        response = HttpResponse('X-RateLimit-Limit: '+str(block_info['limit'])+'\n'
-                                + 'X-RateLimit-Remaining: '+ str(block_info['limit'] - block_info['count'] )+'\n'
-                                + 'X-RateLimit-Reset: '+ str(block_info['time_left']))
-        #header filed
-        response['X-RateLimit-Limit'] = block_info['limit']
-        response['X-RateLimit-Remaining'] = block_info['limit'] - block_info['count']
-        response['X-RateLimit-Reset'] = block_info['time_left']
+
         return response
     
-    @classmethod
     @method_decorator(ratelimit(group = 'post', key='ip', rate='1/s', method='POST'))
-    def post(cls, request):
-        block_info = ratelimit_tracking(request,'post','1/s','POST')
+    def post(self,request):
+        block_info = get_usage(group = 'post', request=request ,key='ip', rate='1/s', method='POST', increment =False)
+        response = ratelimit_response(block_info)
         headerfiled_post_db(request,block_info)
-        response = HttpResponse('X-RateLimit-Limit: '+str(block_info['limit'])+'\n'
-                                + 'X-RateLimit-Remaining: '+ str(block_info['limit'] - block_info['count'] )+'\n'
-                                + 'X-RateLimit-Reset: '+ str(block_info['time_left']))
-        #header filed
-        response['X-RateLimit-Limit'] = block_info['limit']
-        response['X-RateLimit-Remaining'] = block_info['limit'] - block_info['count']
-        response['X-RateLimit-Reset'] = block_info['time_left']
+        
         return response
     
 def reset(request, group=None, fn=None, key=None, rate=None, method=ALL, increment=False):
@@ -119,15 +106,21 @@ def reset(request, group=None, fn=None, key=None, rate=None, method=ALL, increme
     cache_key = _make_cache_key(group, window, rate, value, method)
     cache.get(cache_key)
     if cache.delete(cache_key) == True:
-        return HttpResponse('Reseted',status=200)
-    return HttpResponse('An error occurred from reset cache',status=200)
+        return HttpResponse('Reseted',status=205)
+    return HttpResponse('An error occurred from reset',status=400)
     
 
-#get ratelimit info
-def ratelimit_tracking(request, group, fun_rate, method):
-    block_info = get_usage(group = group, request=request ,key='ip', rate=fun_rate, method=method, increment =False)
-    print(block_info)
-    return block_info
+#build ratelimit response
+def ratelimit_response(block_info):
+    response = HttpResponse('X-RateLimit-Limit: '+str(block_info['limit'])+'\n'
+                                + 'X-RateLimit-Remaining: '+ str(block_info['limit'] - block_info['count'] )+'\n'
+                                + 'X-RateLimit-Reset: '+ str(block_info['time_left']))
+    #header filed
+    response['X-RateLimit-Limit'] = block_info['limit']
+    response['X-RateLimit-Remaining'] = block_info['limit'] - block_info['count']
+    response['X-RateLimit-Reset'] = block_info['time_left']
+    # print(block_info)
+    return response
 
 def headerfiled_post_db(request,block_info):
     client_id = get_client_ip_address(request)
@@ -162,8 +155,6 @@ def headerfiled_get_db(request,block_info):
                        RetryAt = block_info['time_left'])
         except Exception as ex:
             print("Error during update data of post (Possibly unsupported):", ex)
-        
-        
     else:
         try:
             GET_Model.objects.create(customer_ID = client_id,
@@ -189,10 +180,9 @@ def handler403(request, exception=None):
     if isinstance(exception, Ratelimited):
         print("Over Rating")
         if request.method == 'POST':
-            block_info = ratelimit_tracking(request,'post','1/s','POST')
+            block_info = get_usage(group = 'post', request=request ,key='ip', rate='1/s', method='POST', increment =False)
         elif request.method == 'GET':
-            block_info = ratelimit_tracking(request,'get','100/s','GET')
-        print(block_info)
+            block_info = get_usage(group = 'get', request=request ,key='ip', rate='100/s', method='GET', increment =False)
         headerfiled_get_db(request,block_info)
         response = HttpResponse('Too Many Requests'+'\n'
                                 + 'Retry-At: ' + str(block_info['time_left']), status=429)
