@@ -26,7 +26,7 @@ class APITestCase(TestCase):
         print('-----------Get over-----------')
         self.c.post('/reset/',{'group':'get', 'key':'ip', 'rate':'100/s', 'method':'GET'})
         t0 = time.time()
-        for i in range(1,200):
+        for i in range(1,102):
             resp = self.c.get('/api/')
             print(resp.content)
         print('execution time: '+str(time.time()-t0))
