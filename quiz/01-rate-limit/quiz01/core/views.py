@@ -55,10 +55,8 @@ def reset(request, group=None, fn=None, key=None, rate=None, method=ALL, increme
         if isinstance(fn, functools.partial):
             fn = fn.func
 
-        # Django <2.1 doesn't use a partial. This is ugly and inelegant, but
-        # throwing __qualname__ into the list below helps.
-        if fn.__name__ == 'bound_func':
-            fn = fn.__closure__[0].cell_contents
+        # if fn.__name__ == 'bound_func':
+        #     fn = fn.__closure__[0].cell_contents
 
         if hasattr(fn, '__module__'):
             parts.append(fn.__module__)
@@ -66,7 +64,7 @@ def reset(request, group=None, fn=None, key=None, rate=None, method=ALL, increme
         if hasattr(fn, '__self__'):
             parts.append(fn.__self__.__class__.__name__)
 
-        parts.append(fn.__qualname__)
+        # parts.append(fn.__qualname__)
         group = '.'.join(parts)
     
     if callable(rate):
