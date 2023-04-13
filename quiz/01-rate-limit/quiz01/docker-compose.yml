@@ -1,0 +1,47 @@
+services:
+  # db:
+  #   image: postgres
+  #   volumes:
+  #     - ./data/db:/var/lib/postgresql/data
+  #   environment:
+  #     - POSTGRES_DB=postgres
+  #     - POSTGRES_USER=postgres
+  #     - POSTGRES_PASSWORD=postgres
+  web:
+    build: .
+    image: v3.3.1
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - .:/code
+    ports:
+      - "8000:8000"
+    environment:
+      - POSTGRES_NAME=postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    depends_on:
+      # - db
+      - migration
+
+  migration:
+    image: v3.3.1
+    command:  bash -c docker-compose run web python3 manage.py makemigrations && python manage.py migrate
+    volumes:
+      - .:/code
+    # depends_on:
+    #   - db
+
+  # Locust
+  master:
+    image: locustio/locust
+    ports:
+     - "8089:8089"
+    volumes:
+      - ./:/mnt/locust
+    command: -f /mnt/locust/locustfile.py --master -H http://web:8000
+  
+  worker:
+    image: locustio/locust
+    volumes:
+      - ./:/mnt/locust
+    command: -f /mnt/locust/locustfile.py --worker --master-host master
