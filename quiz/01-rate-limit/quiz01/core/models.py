@@ -10,6 +10,7 @@ from django.db import models
 
 class GET_Model(models.Model):
     customer_ID = models.TextField(primary_key=True)
+    path = models.TextField(default = 'n/a')
     Limit = models.IntegerField(default=100)
     Remaining = models.IntegerField(default=100)
     Reset = models.IntegerField(default=1)
@@ -20,6 +21,7 @@ class GET_Model(models.Model):
 
 class POST_Model(models.Model):
     customer_ID = models.TextField(primary_key=True)
+    path = models.TextField(default = 'n/a')
     Limit = models.IntegerField(default=1)
     Remaining = models.IntegerField(default=1)
     Reset = models.IntegerField(default=1)

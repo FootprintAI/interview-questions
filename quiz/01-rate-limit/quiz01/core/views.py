@@ -122,46 +122,29 @@ def ratelimit_response(block_info):
 
 def headerfiled_post_db(request,block_info):
     client_id = get_client_ip_address(request)
-    if POST_Model.objects.filter(customer_ID=client_id).exists():
-        try:
-            db_info = POST_Model.objects.filter(customer_ID = client_id)
-            db_info.update(Limit = block_info['limit'],
-                       Remaining = block_info['limit'] - block_info['count'],
-                       Reset =block_info['time_left'],
-                       RetryAt = block_info['time_left'])
-        except Exception as ex:
-            print("Error during update data of post (Possibly unsupported):", ex)
-    else:
-        try:
-            POST_Model.objects.create(customer_ID = client_id,
-                                  Limit = block_info['limit'],
-                                  Remaining = block_info['limit'] - block_info['count'],
-                                  Reset =block_info['time_left'],
-                                  RetryAt = block_info['time_left'])
-        except Exception as ex:
-            print("Error during create data of post(Possibly unsupported):", ex)
+    POST_Model.objects.update_or_create(
+        customer_ID = client_id,
+        defaults=dict(
+            path = request.path,
+            Remaining = block_info['limit'] - block_info['count'],
+            Reset = block_info['time_left'],
+            RetryAt = block_info['time_left']
+        )
+    )
         
 
 def headerfiled_get_db(request,block_info):
     client_id = get_client_ip_address(request)
-    if GET_Model.objects.filter(customer_ID=client_id).exists():
-        try:
-            db_info = GET_Model.objects.filter(customer_ID = client_id)
-            db_info.update(Limit = block_info['limit'],
-                       Remaining = block_info['limit'] - block_info['count'],
-                       Reset =block_info['time_left'],
-                       RetryAt = block_info['time_left'])
-        except Exception as ex:
-            print("Error during update data of post (Possibly unsupported):", ex)
-    else:
-        try:
-            GET_Model.objects.create(customer_ID = client_id,
-                                  Limit = block_info['limit'],
-                                  Remaining = block_info['limit'] - block_info['count'],
-                                  Reset =block_info['time_left'],
-                                  RetryAt = block_info['time_left'])
-        except Exception as ex:
-            print("Error during create data of get(Possibly unsupported):", ex)
+    GET_Model.objects.update_or_create(
+        customer_ID = client_id,
+        defaults=dict(
+            path = request.path,
+            Remaining = block_info['limit'] - block_info['count'],
+            Reset = block_info['time_left'],
+            RetryAt = block_info['time_left']
+        )
+    )
+
         
         
 def get_client_ip_address(request):
